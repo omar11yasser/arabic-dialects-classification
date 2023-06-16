@@ -1,7 +1,6 @@
 # Libraries imports
 import pandas as pd
 import numpy as np
-import imblearn
 from imblearn.under_sampling import RandomUnderSampler
 import re
 import tashaphyne.normalize as normalize
@@ -16,10 +15,12 @@ import os
 male_names_path = 'inputs/males_ar.csv'
 female_names_path = 'inputs/females_ar.csv'
 
-def preprocessing_pipeline(data_path, validation_split):
+def preprocessing_pipeline(data_path, validation_split, number_features):
     '''
     Args:
-        Arabic dataset CSV file path. Expected columns String: id, String: tweet
+        String: Arabic dataset CSV file path. (Expected columns String: id, String: tweet).
+        Float: validation percentage parameter for spliting the data. Must be between 0 and 1.
+        Int: Number of max features to pass to the vectorizer.
     output
         Four np arrays: x_tarin, x_test, y_train, y_test
     '''
@@ -45,18 +46,20 @@ def preprocessing_pipeline(data_path, validation_split):
     print ('Names removed from tweets!')
     # Remove stop words
     dialects_data = remove_stop_words(dialects_data)
-    # Text stemming. Update: I decided to remove stemming for now as I think that it affects dialects classification negatevially.
-    #dialects_data['tweet'] = dialects_data['tweet'].apply(stem_text)
-    #print('Text stemming applied.')
+    '''
+    # Update: I decided to remove stemming for now as I think that it affects dialects classification negatevially.
+    dialects_data['tweet'] = dialects_data['tweet'].apply(stem_text)
+    print('Text stemming applied.')
+    '''
     # Tagets label encoding
     dialects_data['dialect'] = labels_encoding(dialects_data['dialect'])
     # Splitting data
     tweets = dialects_data['tweet']
     dialect_target = dialects_data['dialect']
     x_train, x_test, y_train, y_test = train_test_split(tweets, dialect_target, test_size = validation_split, random_state = 0)
-    print('Data was split with was split with test_size = 0.2')
+    print('Data was split with was split with test_size = {}.'.format(validation_split))
     # Apply bag of words technique
-    x_train, x_test = data_tf_idf_vectorization(x_train, x_test)
+    x_train, x_test = data_tf_idf_vectorization(x_train, x_test, number_features)
     print('Preprocessing took: {}.'.format(datetime.now() - start))
     return x_train, x_test, y_train, y_test
 
@@ -131,9 +134,9 @@ def labels_encoding(targets):
     print('Classes labels encoded.')
     return encoded_targets
 
-def data_tf_idf_vectorization(x_train, x_test):
-    tfidf_vectorizer = TfidfVectorizer(max_features = 20000)
-# Transform data
+def data_tf_idf_vectorization(x_train, x_test, number_features):
+    tfidf_vectorizer = TfidfVectorizer(max_features = number_features)
+    # Transform data
     X_train_tfidf = tfidf_vectorizer.fit_transform(x_train).toarray()
     X_test_tfidf = tfidf_vectorizer.transform(x_test).toarray()
     return X_train_tfidf, X_test_tfidf
