@@ -12,9 +12,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from datetime import datetime
 import os
 
-male_names_path = 'inputs/males_ar.csv'
-female_names_path = 'inputs/females_ar.csv'
-
 def preprocessing_pipeline(data_path, validation_split, number_features):
     '''
     Args:
@@ -103,23 +100,26 @@ def normalize_arabic(tweet):
     return normalized_data
 
 def remove_arabic_names():
-    male_names = pd.read_csv(male_names_path)
-    female_names = pd.read_csv(female_names_path)
-    # Concat both gender names
-    arabic_names = pd.concat([male_names, female_names])
+    # Gather Names from local documents
+    arabic_names = pd.read_csv('preprocessing/names_stopwords/arabic_names.csv', encoding = 'utf-8')
     # drop gender column
     arabic_names.drop('Gender', axis = 1, inplace = True)
-    # Normalize arabic names
-    arabic_names['Name'] = arabic_names['Name'].apply(normalize_arabic)
-    #Put names into a list
+
     names_list = arabic_names.values.ravel()
-    return names_list
+    # Get list of stopwords from txt file
+    with open('preprocessing/names_stopwords/arabic_names.txt', 'r', encoding="utf8") as file:
+        names = set(file.read().split())
+
+    # Join list form csv and txt files
+    return names.union(names_list)
 
 def remove_stop_words(dialects_data):
+    with open('preprocessing/names_stopwords/arabic_stopwords.txt', 'r', encoding="utf8") as file:
+        stopwords = file.read().split()
+    # Create stop words list by joining nltk stopwords with my own.
     arab_stopwords = set(nltk.corpus.stopwords.words("arabic"))
-    additional_stopwords = {'بس','يوم','ﻣﺎ','و', 'ﻣﻦ', 'ﻓﻲ', 'الي', 'يونيو','اب', 'ام','اه','ابريل','هو','هي','اللي','يا','لما','لو','لذلك'}
-    joint_stop_words = arab_stopwords.union(additional_stopwords)
-    dialects_data['tweet'] = dialects_data['tweet'].apply(lambda x: ' '.join([word for word in x.split() if word not in (joint_stop_words)]))
+    joint_stop_words = arab_stopwords.union(stopwords)
+    dialects_data['tweet'] = dialects_data['tweet'].apply(lambda x: ' '.join([word for word in x.split() if word not in joint_stop_words]))
     print('Stop words removed.')
     return dialects_data
 
